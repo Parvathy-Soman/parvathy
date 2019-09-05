@@ -9,64 +9,9 @@ import re
 from datetime import datetime
 import random
 from format_response import *
-application = Flask(__name__)
-api = Api(application)
-application.config['SQLALCHEMY_DATABASE_URI']='mysql://user7332:*+()!Gyuiq@instancenew.ckssxhrwykga.ap-south-1.rds.amazonaws.com/dastp_mw_dev'
-application.config['SQLALCHEMY_TRACK_MODIFICATIONS']=False
-db=SQLAlchemy(application)
-class User(db.Model):
-    id=db.Column(db.Integer,primary_key=True) 
-    email=db.Column(db.String(200),unique=True,nullable=False)
-    password=db.Column(db.String(200),nullable=False) 
-    reg_date=db.Column(db.Date,nullable=True) 
-    trans_id=db.Column(db.String(200),nullable=True)
-    exp_date=db.Column(db.Date,nullable=True)
-    trans_req_id=db.Column(db.String(200),nullable=True) 
-    status=db.Column(db.String(200),default=0)
-class Complaint_reg(db.Model):
-    id=db.Column(db.Integer,primary_key=True,autoincrement=True)
-    issue_category=db.Column(db.String(100),unique=False,nullable=False)
-    issue_discription=db.Column(db.String(200),unique=False,nullable=False)
-    ticket_raising_date= db.Column(db.DateTime(), default=datetime.utcnow, onupdate=datetime.utcnow)
-    ticket_no=db.Column(db.Integer,unique=True,nullable=False)
-    solution=db.Column(db.String(200),unique=False,nullable=True)
-    status=db.Column(db.String(100),unique=False,nullable=False)
-    user_id=db.Column(db.Integer,db.ForeignKey('user.id'))
-class Escalation(db.Model): 
-    id=db.Column(db.Integer,primary_key=True,autoincrement=True) 
-    escalated_person=db.Column(db.Integer,unique=False,nullable=False) 
-    resolved_person=db.Column(db.Integer,unique=False,nullable=False) 
-    resolved_date=db.Column(db.DateTime(),default=datetime.utcnow,onupdate=datetime.utcnow) 
-    uid=db.Column(db.Integer,db.ForeignKey('complaint_reg.id'))
-class UserProfile(db.Model):
-    id=db.Column(db.Integer,primary_key=True)
-    uid=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
-    fname=db.Column(db.String(100),nullable=False)
-    lname=db.Column(db.String(100),nullable=False)
-    fullname=db.Column(db.String(300),nullable=True)
-    phno=db.Column(db.String(100),nullable=True) 
-    gender=db.Column(db.String(20),nullable=True) 
-    photo=db.Column(db.String(100),nullable=True) 
-    padd1=db.Column(db.String(200),nullable=True) 
-    padd2=db.Column(db.String(200),nullable=True) 
-    pcity=db.Column(db.String(200),nullable=True) 
-    pstate=db.Column(db.String(200),nullable=True) 
-    pcountry=db.Column(db.String(200),nullable=True) 
-    ppincode=db.Column(db.String(200),nullable=True) 
-    madd1=db.Column(db.String(200),nullable=True) 
-    madd2=db.Column(db.String(200),nullable=True) 
-    mcity=db.Column(db.String(200),nullable=True) 
-    mstate=db.Column(db.String(200),nullable=True) 
-    mcountry=db.Column(db.String(200),nullable=True) 
-    mpincode=db.Column(db.String(200),nullable=True) 
-    religion=db.Column(db.String(200),nullable=True) 
-    caste=db.Column(db.String(200),nullable=True) 
-    nationality=db.Column(db.String(200),nullable=True) 
-    dob=db.Column(db.DateTime,nullable=True) 
-    s_caste=db.Column(db.String(200),nullable=True) 
-    annualincome=db.Column(db.String(100),nullable=True) 
-    aadhar=db.Column(db.String(50),nullable=True)
-    
+from model import *
+
+# api = Api(application)    
 class Search_ticket(Resource):
      def post(self):
         try:
@@ -118,7 +63,7 @@ class Search_ticket(Resource):
             print(e) 
             return format_response(False,"Bad gateway",{},502)
                 
-api.add_resource(Search_ticket,"/app/ticket_search")
+
 
 class Status_update(Resource):
     def post(self):
@@ -170,7 +115,7 @@ class Status_update(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)
-api.add_resource(Status_update,"/app/status")
+
 
 class Search_user(Resource):
     def post(self): 
@@ -198,7 +143,7 @@ class Search_user(Resource):
             "data":d 
             }         
             return data2 
-api.add_resource(Search_user,"/app/search")
+
 
 class Update_issue(Resource):
     def post(self):
@@ -237,7 +182,7 @@ class Update_issue(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)
-api.add_resource(Update_issue,"/app/update")
+
 
 class Solution_confirmation(Resource):
     def post(self):
@@ -283,7 +228,7 @@ class Solution_confirmation(Resource):
             print(e) 
             return format_response(False,"Bad gateway",{},502)
                     
-api.add_resource(Solution_confirmation,"/app/solution")
+
 
 class Solution_submit(Resource):
     def post(self):
@@ -314,7 +259,7 @@ class Solution_submit(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)    
-api.add_resource(Solution_submit,"/app/submit")
+
             
 class student_login(Resource): 
     def post(self): 
@@ -334,42 +279,96 @@ class student_login(Resource):
                 return data1 
             else:                              
                 return data2 
-api.add_resource(student_login,"/app/log")
 
-# class Complaint_registration(Resource):
-#     def post(self):
-#             data=request.get_json()
-#             name=data["name"]
-#             phone=data["phone"]
-#             user_id=data["user_id"]
-#             issue=data["issue"]
-#             description=data["description"]
-#             d={"name":name,"phone":phone,"user_id":user_id,"issue":issue,"description":description}
-#             data1={
-#                 "success":"True",
-#                 "message":"view details",
-#                 "data":d
-#             }
-#             return data1
-# api.add_resource(Complaint_registration,"/app/com_reg")
+
+class Complaint_conformation(Resource): 
+    def post(self): 
+        
+        data=request.get_json() 
+        userid=data['userId'] 
+        session_id=data['sessionId'] 
+        uid=data["userid"] 
+        issue=data["issue"] 
+        description=data["description"] 
+           
+        comp=Complaint_reg.query.filter_by(user_id=uid).first() 
+                    
+        d={"user_id":uid,"issue":issue,"discription":description}
+        #return d
+                    
+        if comp.status=="Pending":
+                        #admin = User.query.filter_by(username='admin').update(dict(email='my_new_email@example.com')))
+            comp=Complaint_reg.query.filter_by(user_id=uid).update(dict(status="In progress"))
+            db.session.commit()
+            data={
+                "success":"True",
+                "message":"view details",
+                "data":d        
+            }
+                      
+            return data
+                    # update=comp_previous.status
+                    #db.session.commit() 
+                    #return format_response(True,"complained reopened",d) 
+                        #except Exception: 
+                    # ticket_no=random.randint(1,1000000000) 
+                    # r=Complaint_reg(issue_category=issue,issue_discription=description,ticket_no=ticket_no,status=update,user_id=uid) 
+                    # update.status="new"
+                    # db.session.add(r) 
+                    # db.session.commit() 
+                    # d={"ticket_no":ticket_no} 
+                       
+                    #return format_response(True,"complained registered",d) 
+               
+
+
 # class Complaint_conformation(Resource):
 #     def post(self):
+#         try:
+            
 #             data=request.get_json()
+#             user_id=data['userId'] 
+#             session_id=data['sessionId']             
+#             uid=data["user_id"]
+#             #comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()           
+            
 #             issue=data["issue"]
-#             description=data["description"]
-#             ticket_no=random.randint(1,1000000000)
-#             user_id=data["user_id"]
-#             r=Complaint_reg(issue_category=issue,issue_discription=description,ticket_no=ticket_no,status="pending",user_id=user_id)
-#             db.session.add(r)
-#             db.session.commit()
-#             d={"ticket_no":ticket_no}
-#             data2={
-#                 "success":"True",
-#                 "message":"view details",
-#                 "data":d
-#                 }
-#             return data2
-# api.add_resource(Complaint_conformation,"/app/complaint")
+#             description=data["discription"]
+            
+#             se=True 
+#             if se: 
+#                 per = True
+#                 if per: 
+#                     comp=Complaint_reg.query.filter_by(user_id=uid).first()
+                    
+#                     d={"user_id":uid,"issue_discription":description,"issue_category":issue}
+                    
+#                     if comp.status=="pending":
+#                         #admin = User.query.filter_by(username='admin').update(dict(email='my_new_email@example.com')))
+#                         comp=Complaint_reg.query.filter_by(user_id=uid).update(dict(status="In progress"))
+#                         db.session.commit()
+                        
+#                         # status=com.status
+#                         # s={"status":status}
+#                         # return s
+            
+#                         # if sol=="":
+#                         #     api.add_resource(Update_issue,"/app/update")
+#                         data={
+#                             "success":"True",
+#                             "message":"view details",
+#                             "data":d
+#                         }
+                      
+#                         return data
+#                 else: 
+#                     return format_response(False,"Forbidden access",{},403) 
+#             else: 
+#                 return format_response(False,"Unauthorised access",{},401) 
+#         except Exception as e:
+#             print(e) 
+#             return format_response(False,"Bad gateway",{},502)
+
 
 
 
@@ -441,8 +440,8 @@ api.add_resource(student_login,"/app/log")
 # except Exception as e: 
 #     return format_response(False,"Bad gateway",{},502)
 
-if __name__ == '__main__':
-    db.create_all()
-    application.run(debug = True) 
+# if __name__ == '__main__':
+#     db.create_all()
+#     application.run(debug = True) 
     # application.debug==True
     # application.run() 
