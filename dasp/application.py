@@ -23,6 +23,7 @@ api.add_resource(Solution_submit,"/app/submit")
 #api.add_resource(Status_update,"/app/complaint")
 api.add_resource(Complaint_conformation,"/app/complaint")
 api.add_resource(student_login,"/app/log")
+api.add_resource(Ticket_assign,"/app/assign")
 if __name__ == '__main__':
     db.create_all()
     application.run(debug = True) 

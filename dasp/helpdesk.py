@@ -11,7 +11,11 @@ import random
 from format_response import *
 from model import *
 
-# api = Api(application)    
+api = Api(application) 
+
+#--------------------------------------------------------------------------------------------------------
+# Ticket is searched based on ticket number
+#---------------------------------------------------------------------------------------------------------
 class Search_ticket(Resource):
      def post(self):
         try:
@@ -23,9 +27,17 @@ class Search_ticket(Resource):
             if se: 
                 per = True
                 if per: 
+                    staff_list=[]
+                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
+                    staff_user=UserProfile.query.filter_by(uid=user_id).first()
+                    staff_fname=staff_user.fname
+                    staff_lname=staff_user.lname
+                    staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
+                    staff_list.append(staff_details)
                     comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
                     comp_id=comp.id
                     us_id=comp.user_id
+                    l=[]
                     #return id1
                     data1={
                     "success":"False",
@@ -49,12 +61,15 @@ class Search_ticket(Resource):
                         e_date=comp.ticket_raising_date
                         date=e_date.strftime("%Y-%m-%d")
                         d={"u_id":idd,"first_name":fname,"last_name":lname,"phone":phone_no,"issue":issue,"description":description,"status":status,"escalated_person":esc_person,"ticket_raising_date":date}
-                        data2={
-                        "success":"True",
-                        "message":"view details",
-                        "data":d
-                        }
-                        return data2
+                        # data2={
+                        # "success":"True",
+                        # "message":"view details",
+                        # "data":d
+                        # }
+                        l.append(d)
+                        data={"staff_details":staff_list,"user_dtatils":l}
+                        return format_response(True,"view details",data) 
+                        # return data2
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
@@ -62,9 +77,12 @@ class Search_ticket(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)
-                
 
+api.add_resource(Search_ticket,"/app/ticket_search")                
 
+#.........................................................................................................
+#  STATUS UPDATION--by clicking the solution button,the "Pending"(1) status should be updated as "In progress"(2)
+#..........................................................................................................
 class Status_update(Resource):
     def post(self):
         try:
@@ -74,40 +92,56 @@ class Status_update(Resource):
             session_id=data['sessionId']             
             ticketno=data["ticketno"] 
             #comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()           
-            fname=data["fname"]
-            lname=data["lname"]
-            phone_no=data["phno"]
-            issue=data["issue"]
-            description=data["discription"]
-            esc_person=data["escalated_person"]
-            sol=data["solution"]
-            status=data["status"]
+            # fname=data["fname"]
+            # lname=data["lname"]
+            # phone_no=data["phno"]
+            # issue=data["issue"]
+            # description=data["discription"]
+            # esc_person=data["escalated_person"]
+            # sol=data["solution"]
+            # status=data["status"]
             se=True 
             if se: 
                 per = True
                 if per: 
-                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
+                    staff_list=[]
+                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
+                    staff_user=UserProfile.query.filter_by(uid=user_id).first()
+                    staff_fname=staff_user.fname
+                    staff_lname=staff_user.lname
+                    staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
+                    staff_list.append(staff_details)
+                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno,status=1).first()
+                    comp_id=comp.id
+                    us_id=comp.user_id                    
+                    user_details=UserProfile.query.filter_by(uid=us_id).first()
+                    esl=Escalation.query.filter_by(uid=comp_id).first()
+                    fname=user_details.fname
+                    lname=user_details.lname
+                    phone_no=user_details.phno
+                    issue=comp.issue_category
+                    description=comp.issue_discription
+                    sol=comp.solution
+                    esc_person=esl.escalated_person                                  
+                    l=[]
+                    d={"ticket_no":ticketno,"fname":fname,"lname":lname,"phno":phone_no,"issue_discription":description,"issue_category":issue,"escalated_person":esc_person,"solution":sol}
                     
-                    d={"ticket_no":ticketno,"fname":fname,"lname":lname,"phno":phone_no,"issue_discription":description,"issue_category":issue,"escalated_person":esc_person,"solution":sol,"status":status}
-                    
-                    if comp.status=="pending":
+                    # if comp.status==1:
                         #admin = User.query.filter_by(username='admin').update(dict(email='my_new_email@example.com')))
-                        comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status="In progress"))
-                        db.session.commit()
-                        
-                        # status=com.status
-                        # s={"status":status}
-                        # return s
-            
-                        # if sol=="":
-                        #     api.add_resource(Update_issue,"/app/update")
-                        data={
+                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=2))
+                    db.session.commit()                   
+                    data={
                             "success":"True",
                             "message":"view details",
                             "data":d
-                        }
-                      
-                        return data
+                    }
+                    l.append(d)
+                    data={"staff_details":staff_list,"user_dtatils":l}
+                    return format_response(True,"view details",data)
+                        # return data
+                    # else:
+                    #     return format_response(True,"already in_progress state",{})
+
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
@@ -115,7 +149,7 @@ class Status_update(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)
-
+api.add_resource(Status_update,"/app/status")
 
 class Search_user(Resource):
     def post(self): 
@@ -144,7 +178,8 @@ class Search_user(Resource):
             }         
             return data2 
 
-
+#--------------------------------------------------------------------------------------------------------
+#
 class Update_issue(Resource):
     def post(self):
         try:
@@ -184,6 +219,12 @@ class Update_issue(Resource):
             return format_response(False,"Bad gateway",{},502)
 
 
+
+
+#-----------------------------------------------------------------------------------------------------------
+# After writing the solution, the status "In progress"(2) should be updated as "Resolved"(3)
+#---------------------------------------------------------------------------------------------------------------
+                    
 class Solution_confirmation(Resource):
     def post(self):
         try:
@@ -191,35 +232,66 @@ class Solution_confirmation(Resource):
             user_id=data['userId'] 
             session_id=data['sessionId'] 
             ticketno=data["ticketno"]
-            fname=data["fname"]
-            lname=data["lname"]
-            issue=data["issue"]
+            # fname=data["fname"]
+            # lname=data["lname"]
+            # issue=data["issue"]
             solution=data["solution"]
-            discription=data["discription"]
-            user_id=data["user_id"]
+            # discription=data["discription"]
+            # res_person=data["resolved_person"]
+            # user_id=data["user_id"]
+          
             se=True 
             if se: 
                 per = True
                 if per:
-                    d={"ticket_no":ticketno,"fname":fname,"lname":lname,"issue_category":issue,"solution":solution,"issue_discription":discription,"user_id":user_id}
+                    staff_list=[]
+                    staff_user=UserProfile.query.filter_by(uid=user_id,id=session_id).first()
+                    staff_fname=staff_user.fname
+                    staff_lname=staff_user.lname
+                    staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
+                    staff_list.append(staff_details)
+                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
+                    comp_id=comp.id
+                    us_id=comp.user_id                    
+                    user_details=UserProfile.query.filter_by(uid=us_id).first()
+                    esl=Escalation.query.filter_by(uid=comp_id).first()
+                    fname=user_details.fname
+                    lname=user_details.lname
+                    phone_no=user_details.phno
+                    issue=comp.issue_category
+                    description=comp.issue_discription
+                    sol=comp.solution
+                    l=[]
+                    d={"ticket_no":ticketno,"lname":lname,"phno":phone_no,"issue_category":issue,"issue_discription":description,"user_id":user_id}
                     sol=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
+                    sts=Escalation.query.filter_by(uid=Complaint_reg.id).first()
+                    # comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=3))
                     # db.session.add(sol)
                     # db.session.commit()
-                    data1={        
-                        "success":"False",
-                        "message":"Updation failed"            
-                    }
-                    if sol==None: 
-                        return data1 
-                    else:
+                    # data={        
+                    #     "success":"False",
+                    #     "message":"Updation failed"            
+                    # }
+                    if sol.status==2 and sts.status==2:
                         sol.solution=solution
-                        db.session.commit()                     
-                    data2={
+                        sts.status=solution
+                        # sol.status="3"
+                        comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=3))
+                        # sts=Escalation.query.filter_by(uid=Complaint_reg.id).update(dict(status=3))
+                        sts.status=3
+                        db.session.commit()       
+                        
+                    else:
+                        return data                    
+                    data={
                         "success":"True",
                         "message":"view details",
                         "data":d
                         }
-                    return data2
+                    l.append(d)
+                    data={"staff_details":staff_list,"user_details":l}
+                    return format_response(True,"view details",data)
+                    # return data2
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
@@ -227,7 +299,8 @@ class Solution_confirmation(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)
-                    
+api.add_resource(Solution_confirmation,"/app/solution")
+
 
 
 class Solution_submit(Resource):
@@ -259,6 +332,42 @@ class Solution_submit(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)    
+
+class Ticket_assign(Resource):
+    def post(self):
+        try:
+            data=request.get_json()
+            user_id=data['userId'] 
+            session_id=data['sessionId']
+            ticketno=data["ticket_no"]
+            name=data["fname"]
+            issue=data["issue"]
+            discription=data["discription"]
+            esc_person=data["esc_person"]
+            ass_person=data["ass_person"]
+            se=True 
+            if se: 
+                per = True
+                if per:
+                    update=Escalation.query.filter_by(uid=Complaint_reg.id).first()
+                    update.resolved_person=ass_person
+                    db.session.commit()
+                    d={"ticket_no":ticketno,"fullname":name,"issue_category":issue,"issue_discription":discription,"escalated_person":esc_person,"assigned_person":ass_person}
+                    data={
+                            "success":"True",
+                            "message":"view details",
+                            "data":d                
+                        }
+                    return data
+                   
+                else: 
+                    return format_response(False,"Forbidden access",{},403) 
+            else: 
+                return format_response(False,"Unauthorised access",{},401) 
+        except Exception as e:
+            print(e) 
+            return format_response(False,"Bad gateway",{},502)    
+
 
             
 class student_login(Resource): 
@@ -322,52 +431,7 @@ class Complaint_conformation(Resource):
                
 
 
-# class Complaint_conformation(Resource):
-#     def post(self):
-#         try:
-            
-#             data=request.get_json()
-#             user_id=data['userId'] 
-#             session_id=data['sessionId']             
-#             uid=data["user_id"]
-#             #comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()           
-            
-#             issue=data["issue"]
-#             description=data["discription"]
-            
-#             se=True 
-#             if se: 
-#                 per = True
-#                 if per: 
-#                     comp=Complaint_reg.query.filter_by(user_id=uid).first()
-                    
-#                     d={"user_id":uid,"issue_discription":description,"issue_category":issue}
-                    
-#                     if comp.status=="pending":
-#                         #admin = User.query.filter_by(username='admin').update(dict(email='my_new_email@example.com')))
-#                         comp=Complaint_reg.query.filter_by(user_id=uid).update(dict(status="In progress"))
-#                         db.session.commit()
-                        
-#                         # status=com.status
-#                         # s={"status":status}
-#                         # return s
-            
-#                         # if sol=="":
-#                         #     api.add_resource(Update_issue,"/app/update")
-#                         data={
-#                             "success":"True",
-#                             "message":"view details",
-#                             "data":d
-#                         }
-                      
-#                         return data
-#                 else: 
-#                     return format_response(False,"Forbidden access",{},403) 
-#             else: 
-#                 return format_response(False,"Unauthorised access",{},401) 
-#         except Exception as e:
-#             print(e) 
-#             return format_response(False,"Bad gateway",{},502)
+
 
 
 
