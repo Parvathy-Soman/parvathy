@@ -38,7 +38,7 @@ class Escalation(db.Model):
     resolved_person=db.Column(db.Integer,unique=False,nullable=False) 
     resolved_date=db.Column(db.DateTime(),default=datetime.utcnow,onupdate=datetime.utcnow)
     status=db.Column(db.Integer,unique=False,nullable=True) 
-    solution=db.Colum(db.String(100),nullable=True)
+    solution=db.Column(db.String(100),nullable=True)
     uid=db.Column(db.Integer,db.ForeignKey('complaint_reg.id'))
 class UserProfile(db.Model):
     id=db.Column(db.Integer,primary_key=True)
@@ -68,3 +68,12 @@ class UserProfile(db.Model):
     s_caste=db.Column(db.String(200),nullable=True) 
     annualincome=db.Column(db.String(100),nullable=True) 
     aadhar=db.Column(db.String(50),nullable=True)
+
+class Session(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    uid=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
+    dev_type=db.Column(db.String(1),nullable=True)
+    session_token=db.Column(db.String(200),nullable=False,unique=True)
+    exp_time=db.Column(db.DateTime,nullable=False)
+    IP=db.Column(db.String(256),nullable=False)
+    MAC=db.Column(db.String(256),nullable=False)
