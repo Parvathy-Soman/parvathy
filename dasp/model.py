@@ -31,6 +31,7 @@ class Complaint_reg(db.Model):
     ticket_no=db.Column(db.Integer,unique=True,nullable=False)
     solution=db.Column(db.String(200),unique=False,nullable=True)
     status=db.Column(db.Integer,unique=False,nullable=False)
+    issue_ss_url=db.Column(db.String(200),unique=False,nullable=True)
     user_id=db.Column(db.Integer,db.ForeignKey('user.id'))
 class Escalation(db.Model): 
     id=db.Column(db.Integer,primary_key=True,autoincrement=True) 
@@ -77,3 +78,23 @@ class Session(db.Model):
     exp_time=db.Column(db.DateTime,nullable=False)
     IP=db.Column(db.String(256),nullable=False)
     MAC=db.Column(db.String(256),nullable=False)
+
+class RoleMapping(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    role_id=db.Column(db.Integer,db.ForeignKey('role.id'),nullable=False)
+    user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
+
+class Role(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    role_name=db.Column(db.String(100),nullable=False)
+    role_type=db.Column(db.String(100),nullable=False)
+
+class Complaint_reg_constants(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    values=db.Column(db.Integer,unique=True,nullable=False)
+    constants=db.Column(db.String(200),nullable=False,unique=True)
+    
+class issue_category_constants(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    issue_no=db.Column(db.Integer,unique=True,nullable=False)
+    issue=db.Column(db.String(200),nullable=False,unique=True)

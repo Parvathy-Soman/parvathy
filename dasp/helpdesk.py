@@ -22,7 +22,8 @@ class Search_ticket(Resource):
             data=request.get_json()
             user_id=data['userId'] 
             session_id=data['sessionId'] 
-            ticketno=data["ticketno"]
+            ticketno=data["ticketNo"]
+            tid=data["ticketId"]
             se=True 
             if se: 
                 per = True
@@ -40,7 +41,7 @@ class Search_ticket(Resource):
                     staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
                     staff_list.append(staff_details)
                     staff_dict={"staff_details":staff_list}
-                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
+                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno,id=tid).first()
                     comp_id=comp.id
                     us_id=comp.user_id
                     l=[]
@@ -55,7 +56,9 @@ class Search_ticket(Resource):
                         idd=comp.id
                         #return idd                              
                         user_details=UserProfile.query.filter_by(uid=us_id).first()
-                        esl=Escalation.query.filter_by(uid=comp_id).first()
+                        esl=Escalation.query.filter_by(uid=comp_id).first()                                             
+                        status_details=Complaint_reg_constants.query.filter_by(values=comp.status).first() 
+                        issue_details=issue_category_constants.query.filter_by(issue_no=comp.issue_category).first()                       
                         #id1=escalation_details.
                         uid=user_details.uid
                         dasp=stud_myprogramme(uid)
@@ -63,13 +66,13 @@ class Search_ticket(Resource):
                         fname=user_details.fname
                         lname=user_details.lname
                         phone_no=user_details.phno
-                        issue=comp.issue_category
+                        issue=issue_details.issue
                         description=comp.issue_discription
-                        status=comp.status
+                        status=status_details.constants
                         esc_person=esl.escalated_person
                         e_date=comp.ticket_raising_date
                         date=e_date.strftime("%Y-%m-%d")
-                        d={"u_id":idd,"first_name":fname,"last_name":lname,"phone":phone_no,"issue":issue,"description":description,"status":status,"escalated_person":esc_person,"ticket_raising_date":date,"programme_details":user_programme_details}
+                        d={"u_id":idd,"first_name":fname,"last_name":lname,"phone":phone_no,"issue":issue,"description":description,"status":status,"escalated_person":esc_person,"ticket_raising_date":date,"id":tid,"programme_details":user_programme_details}
                         # data2={
                         # "success":"True",
                         # "message":"view details",
@@ -160,50 +163,6 @@ class Status_update(Resource):
             print(e) 
             return format_response(False,"Bad gateway",{},502)
 api.add_resource(Status_update,"/app/status")
-
-
-
-#--------------------------------------------------------------------------------------------------------
-#
-class Update_issue(Resource):
-    def post(self):
-        try:
-            data=request.get_json()
-            user_id=data['userId'] 
-            session_id=data['sessionId'] 
-            ticketno=data["ticketno"]
-            solution=data["solution"]
-            status=data["status"]
-            se=True 
-            if se: 
-                per = True
-                if per: 
-                    update=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
-                    data1={        
-                        "success":"False",
-                        "message":"Updation failed"            
-                    }
-                    if update==None: 
-                        return data1 
-                    else: 
-                        update.solution=solution
-                        update.status=status
-                        db.session.commit()
-                        
-                    data2={
-                        "success":"True",
-                        "message":"Details updated successfully" 
-                    }
-                    return data2
-                else: 
-                    return format_response(False,"Forbidden access",{},403) 
-            else: 
-                return format_response(False,"Unauthorised access",{},401) 
-        except Exception as e:
-            print(e) 
-            return format_response(False,"Bad gateway",{},502)
-
-
 
 
 #-----------------------------------------------------------------------------------------------------------
@@ -347,6 +306,81 @@ class Ticket_assign(Resource):
             return format_response(False,"Bad gateway",{},502)   
 api.add_resource(Ticket_assign,"/app/assign")
 
+#---------------------------------------------------------------------------------------------------------
+#  Fetch admin and teacher for assigning the issues
+#---------------------------------------------------------------------------------------------------------
+
+class Fetch_users(Resource):
+    def post(self):
+        try:
+            data=request.get_json()
+            user_id=data['userId'] 
+            session_id=data['sessionId']
+            
+            se=True 
+            if se: 
+                per = True
+                if per:
+                    staff_list=[]
+                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first() 
+                    staff_user=UserProfile.query.filter_by(uid=user_id).first()
+                    staff_fname=staff_user.fname
+                    staff_lname=staff_user.lname
+                    staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
+                    staff_list.append(staff_details)
+                   
+                    users=Role.query.all()
+                    l=[]
+                    rolelist=[]
+                    # user_details=UserProfile.query.filter(uid=RoleMapping.user_id)
+                    # user_details=UserProfile.query.filter_by(uid=us_id)
+                    # rolemap_details=RoleMapping.query.filter_by(user_id=user_details.id).first() 
+                    # users=User.query.filter(id=rolemap_details.user_id)
+                    # role_details=Role.query.filter_by(id=rolemap_details.role_id).first()
+                    for i in users:
+                        if i.role_type=="Admin":
+
+                            role_id=i.id
+                            name=i.role_name
+                            rtype=i.role_type
+
+                            d={"id":role_id,"role_name":name,"role_type":rtype}
+                            rolelist.append(d)
+                        # user_details=UserProfile.query.filter_by(uid=us_id)
+                        # role_details=Role.query.filter_by(id=role_id).first()
+                        # rolemap_details=RoleMapping.query.filter_by(user_id=user_details.uid).first()
+                        # user_details=UserProfile.query.filter_by(uid=rolemap_details.user_id).first()
+                        # rolemap_details=RoleMapping.query.filter_by(user_id=user_details.id).first() 
+                        # if role_details.role_type=="Admin" or role_details.role_type=="Teacher":
+                        #     role_type=role_details.role_type
+                        #     fname=user_details.fname
+                        #     lname=user_details.lname
+                        #     d={"role_id":role_id,"user_id":us_id,"fname":fname,"lname":lname,"role_type":role_type}
+                        data={
+                                "success":"True",
+                                "message":"view details",
+                                "data":rolelist               
+                            }
+                        return data
+                            
+                        data={"staff_details":staff_list,"user_details":l}
+                        return format_response(True,"view details",data)
+                    # if data.role_type=="Admin" or data.role_type=="Teacher":
+                    #     data1={
+                    #         "success":"True",
+                    #         "message":"view details",
+                    #         "data":d                
+                    #     }
+                else: 
+                    return format_response(False,"Forbidden access",{},403) 
+            else: 
+                return format_response(False,"Unauthorised access",{},401) 
+        except Exception as e:
+            print(e) 
+            return format_response(False,"Bad gateway",{},502)   
+api.add_resource(Fetch_users,"/app/users_list")
+
+
 
 
 
@@ -381,7 +415,40 @@ class Solution_submit(Resource):
             print(e) 
             return format_response(False,"Bad gateway",{},502)    
 
- 
+# class finding_assigned_persons_id(Resource): 
+#     def post(self): 
+#         try: 
+#             data=request.get_json() 
+#             user_id=data['userId'] 
+#             session_id=data['sessionId'] 
+#             se=True 
+#             if se: 
+#                 per = True 
+#                 if per: 
+#                     user_data=[] 
+#                     role_list=[] 
+#                     role=Role.query.all() 
+#                     for i in role: 
+#                         if i.role_type=="Admin" : 
+#                             user_data.append(i.id) 
+#                             user_data.append(i.role_type) 
+#                             user_data.append(i.role_name) 
+#                             role_list.append(user_data) 
+#                             user_data=[] 
+#                             elif i.role_type=="Teacher": 
+#                                 user_data.append(i.id) 
+#                                 user_data.append(i.role_type) 
+#                                 user_data.append(i.role_name) 
+#                                 role_list.append(user_data) 
+#                                 user_data=[] 
+#                                 return(role_list) 
+#                                 else: 
+#                                     return format_response(False,"Forbidden access",{},403) 
+#                                     else: 
+#                                         return format_response(False,"Unauthorised access",{},401) 
+#                                         except Exception as e: 
+#                                             print(e) 
+#                                             return format_response(False,"Bad gateway",{},502)
 
 
             
