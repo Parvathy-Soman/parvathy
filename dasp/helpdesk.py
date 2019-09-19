@@ -128,10 +128,11 @@ class Status_update(Resource):
                     us_id=comp.user_id                    
                     user_details=UserProfile.query.filter_by(uid=us_id).first()
                     esl=Escalation.query.filter_by(uid=comp_id).first()
+                    issue_details=issue_category_constants.query.filter_by(issue_no=comp.issue_category).first()         
                     fname=user_details.fname
                     lname=user_details.lname
                     phone_no=user_details.phno
-                    issue=comp.issue_category
+                    issue=issue_details.issue
                     description=comp.issue_discription
                     sol=comp.solution
                     esc_person=esl.escalated_person                                  
@@ -316,61 +317,88 @@ class Fetch_users(Resource):
             data=request.get_json()
             user_id=data['userId'] 
             session_id=data['sessionId']
-            
             se=True 
             if se: 
                 per = True
                 if per:
+                    # def fetch_user(id):
+                    #         print(id)
+                        # role_details=Role.query.filter_by(id=RoleMapping.role_id).first() 
+                        # admin_details=UserProfile.query.filter_by(uid=RoleMapping.user_id).first()
+                        # fname=admin_details.fname
+                        # lname=admin_details.lname
+                        # role_id=role_details.id
+                        # role_name=role_details.role_name
+                        # role_type=role_details.role_type
+                        # user_list=[]
+                        # for i in admin_details:
+                        #     uid=i.uid
+                        #     fname=i.fname
+                        #     lname=i.lname
+                        #     phno=i.phno
+                        #     d={"uid":uid,"fname":fname,"lname":lname,"phno":phno}
+                        #     user_list.append(d)
+                        #     return user_list
+                        #     user=fetch_user(id)
+                        #     details=user["data"]
                     staff_list=[]
-                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first() 
+                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
                     staff_user=UserProfile.query.filter_by(uid=user_id).first()
                     staff_fname=staff_user.fname
                     staff_lname=staff_user.lname
                     staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
                     staff_list.append(staff_details)
-                   
-                    users=Role.query.all()
                     l=[]
-                    rolelist=[]
-                    # user_details=UserProfile.query.filter(uid=RoleMapping.user_id)
+                    # admin_list=[]
+                    li=[]
+                    user_list=[]
+                    users=Role.query.all()
+                    role_details=Role.query.filter_by(id=RoleMapping.role_id).first()                   
+                    # admin_details=UserProfile.query.filter_by(uid=RoleMapping.user_id).first()
+                    # fname=admin_details.fname
+                    # lname=admin_details.lname
+                    # role_id=role_details.id
+                    # role_name=role_details.role_name
+                    # admin_dtls={"fname":fname,"lname":lname,"id":role_id,"role_name":role_name}
+                    # admin_list.append(admin_dtls)
                     # user_details=UserProfile.query.filter_by(uid=us_id)
                     # rolemap_details=RoleMapping.query.filter_by(user_id=user_details.id).first() 
                     # users=User.query.filter(id=rolemap_details.user_id)
                     # role_details=Role.query.filter_by(id=rolemap_details.role_id).first()
+                  
                     for i in users:
-                        if i.role_type=="Admin":
-
-                            role_id=i.id
+                        if i.role_type=="Admin" or i.role_type=="Teacher":
+                            r_id=i.id
                             name=i.role_name
-                            rtype=i.role_type
-
-                            d={"id":role_id,"role_name":name,"role_type":rtype}
-                            rolelist.append(d)
-                        # user_details=UserProfile.query.filter_by(uid=us_id)
-                        # role_details=Role.query.filter_by(id=role_id).first()
-                        # rolemap_details=RoleMapping.query.filter_by(user_id=user_details.uid).first()
-                        # user_details=UserProfile.query.filter_by(uid=rolemap_details.user_id).first()
-                        # rolemap_details=RoleMapping.query.filter_by(user_id=user_details.id).first() 
-                        # if role_details.role_type=="Admin" or role_details.role_type=="Teacher":
-                        #     role_type=role_details.role_type
-                        #     fname=user_details.fname
-                        #     lname=user_details.lname
-                        #     d={"role_id":role_id,"user_id":us_id,"fname":fname,"lname":lname,"role_type":role_type}
-                        data={
-                                "success":"True",
-                                "message":"view details",
-                                "data":rolelist               
-                            }
-                        return data
+                            role=i.role_type
+                            d={"id":r_id,"role_name":name,"role":role}
+                            li.append(d)                                          
+                    l.append(d)
+                    role_details=Role.query.filter_by(id=RoleMapping.role_id).first() 
+                    admin_details=UserProfile.query.filter_by(uid=RoleMapping.user_id).first()
+                    assigned_users=UserProfile.query.all()
+                    fname=admin_details.fname
+                    lname=admin_details.lname
+                    user_list=[]
+                    for i in assigned_users:
+                        uid=i.uid
+                        fname=i.fname
+                        lname=i.lname
                             
-                        data={"staff_details":staff_list,"user_details":l}
-                        return format_response(True,"view details",data)
-                    # if data.role_type=="Admin" or data.role_type=="Teacher":
-                    #     data1={
-                    #         "success":"True",
-                    #         "message":"view details",
-                    #         "data":d                
-                    #     }
+                        d={"uid":uid,"fname":fname,"lname":lname}
+                        user_list.append(d)
+                    # for i in li:
+                    #     rid=role_details.id
+                    #     print(rid)
+                    #     user=fetch_user(rid)
+                    #     details=user["data"]
+                        
+                    #     print(i["id"])
+
+                    data={"staff_details":staff_list,"user_details":li,"assignee_details":user_list}
+                    
+                    return format_response(True,"view details",data)
+                    return format_response(True,"Admin details",data)    
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
