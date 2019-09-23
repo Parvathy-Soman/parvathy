@@ -31,6 +31,7 @@ class Complaint_reg(db.Model):
     ticket_no=db.Column(db.Integer,unique=True,nullable=False)
     solution=db.Column(db.String(200),unique=False,nullable=True)
     status=db.Column(db.Integer,unique=False,nullable=False)
+    issue=db.Column(db.String(200),unique=False,nullable=False)
     issue_ss_url=db.Column(db.String(200),unique=False,nullable=True)
     user_id=db.Column(db.Integer,db.ForeignKey('user.id'))
 class Escalation(db.Model): 
