@@ -24,8 +24,9 @@ class Search_ticket(Resource):
             user_id=data['userId'] 
             session_id=data['sessionId'] 
             ticketno=data["ticketNo"]
-            tid=data["ticketId"]
-            se=True 
+            # tid=data["ticketId"]
+            se=checkSessionValidity(session_id,user_id)  
+            
             if se: 
                 per = True
                 if per: 
@@ -35,12 +36,12 @@ class Search_ticket(Resource):
                         userDataResponse=json.loads(userData.text) 
                         return userDataResponse
                     user_data=db.session.query(Complaint_reg,Escalation,UserProfile).with_entities(Escalation.escalated_person.label("esc_person"),Escalation.resolved_person.label("res_person"),
-                        Escalation.status.label("status"),Escalation.solution.label("status"),UserProfile.uid.label("user_id"),UserProfile.fname.label("fname"),
-                        UserProfile.lname.label("lname")).filter(Escalation.uid==Complaint_reg.id,Escalation.resolved_person==UserProfile.uid).all()
+                        Escalation.status.label("status"),Escalation.solution.label("solution"),UserProfile.uid.label("user_id"),UserProfile.fname.label("fname"),
+                        UserProfile.lname.label("lname")).filter(Escalation.complaint_id==Complaint_reg.id,Escalation.resolved_person==UserProfile.uid).all()
                     userData=list(map(lambda n:n._asdict(),user_data))
                     # return format_response(True,"Resolved_person_details",userData)
                     staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
-                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno,id=tid).first()
+                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
                     comp_id=comp.id
                     us_id=comp.user_id
                     l=[]
@@ -54,7 +55,7 @@ class Search_ticket(Resource):
                         idd=comp.id
                         #return idd                              
                         user_details=UserProfile.query.filter_by(uid=us_id).first()
-                        esl=Escalation.query.filter_by(uid=comp_id).first()                                             
+                        esl=Escalation.query.filter_by(complaint_id=comp_id).first()                                             
                         status_details=Complaint_reg_constants.query.filter_by(values=comp.status).first() 
                         issue_details=issue_category_constants.query.filter_by(issue_no=comp.issue_category).first()                       
                         #id1=escalation_details.
@@ -65,12 +66,14 @@ class Search_ticket(Resource):
                         lname=user_details.lname
                         phone_no=user_details.phno
                         issue=issue_details.issue
+                        ticketno=comp.ticket_no
                         description=comp.issue_discription
                         status=status_details.constants
                         esc_person=esl.escalated_person
                         e_date=comp.ticket_raising_date
                         date=e_date.strftime("%Y-%m-%d")
-                        d={"u_id":uid,"first_name":fname,"last_name":lname,"phone":phone_no,"issue":issue,"description":description,"status":status,"escalated_person":esc_person,"ticket_raising_date":date,"id":tid,"programme_details":user_programme_details,"Resolved_person_details":userData}
+                        tid=comp.id
+                        d={"u_id":uid,"first_name":fname,"last_name":lname,"phone":phone_no,"issue":issue,"description":description,"ticketno":ticketno,"status":status,"escalated_person":esc_person,"ticket_raising_date":date,"ticket_id":tid,"programme_details":user_programme_details,"Resolved_person_details":userData}
                         # data2={
                         # "success":"True",
                         # "message":"view details",
@@ -91,7 +94,7 @@ class Search_ticket(Resource):
 # api.add_resource(Search_ticket,"/app/ticket_search")                
 
 #.........................................................................................................
-#  STATUS UPDATION--by clicking the solution button,the "Pending"(1) status should be updated as "In progress"(2)
+#  STATUS UPDATION--by clicking the solution button,the "Pending"(2) status should be updated as "In progress"(3)
 #..........................................................................................................
 class Status_update(Resource):
     def post(self):
@@ -105,18 +108,18 @@ class Status_update(Resource):
             if se: 
                 per = True
                 if per: 
-                    staff_list=[]
+                    # staff_list=[]
                     staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
-                    staff_user=UserProfile.query.filter_by(uid=user_id).first()
-                    staff_fname=staff_user.fname
-                    staff_lname=staff_user.lname
-                    staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
-                    staff_list.append(staff_details)
+                    # staff_user=UserProfile.query.filter_by(uid=user_id).first()
+                    # staff_fname=staff_user.fname
+                    # staff_lname=staff_user.lname
+                    # staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
+                    # staff_list.append(staff_details)
                     comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
                     comp_id=comp.id
                     us_id=comp.user_id                    
                     user_details=UserProfile.query.filter_by(uid=us_id).first()
-                    esl=Escalation.query.filter_by(uid=comp_id).first()
+                    esl=Escalation.query.filter_by(complaint_id=comp_id).first()
                     issue_details=issue_category_constants.query.filter_by(issue_no=comp.issue_category).first()         
                     fname=user_details.fname
                     lname=user_details.lname
@@ -128,10 +131,10 @@ class Status_update(Resource):
                     l=[]
                     d={"ticket_no":ticketno,"fname":fname,"lname":lname,"phno":phone_no,"issue_discription":description,"issue_category":issue,"escalated_person":esc_person,"solution":sol}
                     
-                    if comp.status==1 and esl.status==1:
+                    if comp.status==2 and esl.status==2:
                         #admin = User.query.filter_by(username='admin').update(dict(email='my_new_email@example.com')))
-                        comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=2))
-                        esl.status=2
+                        comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=3))
+                        esl.status=3
                         db.session.commit()                   
                         data={
                             "success":"True",
@@ -139,7 +142,7 @@ class Status_update(Resource):
                             "data":d
                         }
                         l.append(d)
-                        data={"staff_details":staff_list,"user_dtatils":l}
+                        data={"user_details":l}
                         return format_response(True,"view details",data)
                         # return data
                     else:
@@ -156,7 +159,7 @@ class Status_update(Resource):
 
 
 #-----------------------------------------------------------------------------------------------------------
-# After writing the solution, the status "In progress"(2) should be updated as "Resolved"(3)
+# After writing the solution, the status "In progress"(3) should be updated as "Resolved"(4)
 #---------------------------------------------------------------------------------------------------------------
                     
 class Solution_confirmation(Resource):
@@ -171,7 +174,7 @@ class Solution_confirmation(Resource):
             # issue=data["issue"]
             solution=data["solution"]
             # discription=data["discription"]
-            resolved_person=data["resolved_person"]
+            # resolved_person=data["resolved_person"]
             # escalated_person=data["escalated_person"]
             # user_id=data["user_id"]
           
@@ -179,18 +182,18 @@ class Solution_confirmation(Resource):
             if se: 
                 per = True
                 if per:
-                    staff_list=[]
+                    # staff_list=[]
                     staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
-                    staff_user=UserProfile.query.filter_by(uid=user_id).first()
-                    staff_fname=staff_user.fname
-                    staff_lname=staff_user.lname
-                    staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
-                    staff_list.append(staff_details)
+                    # staff_user=UserProfile.query.filter_by(uid=user_id).first()
+                    # staff_fname=staff_user.fname
+                    # staff_lname=staff_user.lname
+                    # staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
+                    # staff_list.append(staff_details)
                     comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
                     comp_id=comp.id
                     us_id=comp.user_id                    
                     user_details=UserProfile.query.filter_by(uid=us_id).first()
-                    esl=Escalation.query.filter_by(uid=comp_id).first()
+                    esl=Escalation.query.filter_by(complaint_id=comp_id).first()
                     fname=user_details.fname
                     lname=user_details.lname
                     phone_no=user_details.phno
@@ -202,7 +205,7 @@ class Solution_confirmation(Resource):
                     l=[]
                     d={"ticket_no":ticketno,"lname":lname,"phno":phone_no,"issue_category":issue,"issue_discription":description,"user_id":user_id,"resolved_person":resolved_person}
                     sol=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
-                    sts=Escalation.query.filter_by(uid=Complaint_reg.id).first()
+                    sts=Escalation.query.filter_by(complaint_id=Complaint_reg.id).first()
                     # comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=3))
                     # db.session.add(sol)
                     # db.session.commit()
@@ -210,14 +213,14 @@ class Solution_confirmation(Resource):
                     #     "success":"False",
                     #     "message":"Updation failed"            
                     # }
-                    if sol.status==2 and sts.status==2:
+                    if sol.status==3 and sts.status==3:
                         sol.solution=solution
                         sts.solution=solution
-                        sts.resolved_person=resolved_person
+                        # sts.resolved_person=resolved_person
                         # sol.status="3"
-                        comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=3))
+                        comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=4))
                         # sts=Escalation.query.filter_by(uid=Complaint_reg.id).update(dict(status=3))
-                        sts.status=3                       
+                        sts.status=4                       
                         db.session.commit()       
                         
                     else:
@@ -228,7 +231,7 @@ class Solution_confirmation(Resource):
                         "data":d
                         }
                     l.append(d)
-                    data={"staff_details":staff_list,"user_details":l}
+                    data={"user_details":l}
                     return format_response(True,"view details",data)
                     
                     # return data2
@@ -242,7 +245,7 @@ class Solution_confirmation(Resource):
 # api.add_resource(Solution_confirmation,"/app/solution")
 
 #--------------------------------------------------------------------------------------------------
-#  ticket is reassigned if the status is new(0) or reopen(5)
+#  ticket is reassigned if the status is Resolved(4)
 #--------------------------------------------------------------------------------------------------
 
 class Ticket_reassign(Resource):
@@ -269,7 +272,7 @@ class Ticket_reassign(Resource):
                     l=[]
                      
                     comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
-                    update=Escalation.query.filter_by(uid=Complaint_reg.id).first()  
+                    update=Escalation.query.filter_by(complaint_id=Complaint_reg.id).first()  
                     if comp.status==0 or comp.status==5:                                     
                         update.resolved_person=ass_person
                         db.session.commit() 
@@ -354,18 +357,24 @@ class Assign_submit(Resource):
             uid=data["uId"]
             escalated_person=data["escalatedPerson"]
             resolved_person=data["resolvedPerson"]
-            resolved_date=data["resolvedDate"]
-            status=data["status"]
-            solution=data["solution"]
+            # resolved_date=data["resolvedDate"]
+            # status=data["status"]
+            # solution=data["solution"]
             se=checkSessionValidity(session_id,user_id) 
             if se: 
                 per = True
                 if per:                  
-                    assign=Escalation(uid=uid,escalated_person=escalated_person,resolved_person=resolved_person,status="Pending",solution=solution)
+                    assign=Escalation(complaint_id=uid,escalated_person=escalated_person,resolved_person=resolved_person,status=2)
                     db.session.add(assign)
                     db.session.commit()
-                    details={"userDetails":assign}
-                    return format_response(True,"complained registered",details)
+                    # details={"userDetails":assign}
+                    # data={
+                    #         "success":"True",
+                    #         "message":"view details",
+                    #         "data":assign               
+                    #     }
+                    # return data
+                    return format_response(True,"Assignee is selected successfully")
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
@@ -374,36 +383,57 @@ class Assign_submit(Resource):
             print(e)
             return format_response(False,"Bad gateway",{},502)
 
-
-class Solution_submit(Resource):
+class Assigned_issues(Resource):
     def post(self):
         try:
             data=request.get_json()
             user_id=data['userId'] 
             session_id=data['sessionId'] 
-            ticket=data["ticketno"]
-            issue=data["issue"]
-            des=data["discription"]
-            sol=data["solution"]
-            res_person=data["resolved_person"]
-            se=True 
+            se=checkSessionValidity(session_id,user_id) 
             if se: 
                 per = True
-                if per:
-                    d={"ticket_no":ticket,"issue_discription":des,"issue_category":issue,"solution":sol,"resolved_person":res_person}
-                    data={
-                            "success":"True",
-                            "message":"view details",
-                            "data":d                
-                        }
-                    return data
+                if per:                  
+                    issues_data=db.session.query(Complaint_reg,Escalation,Complaint_reg_constants).with_entities(Complaint_reg.ticket_no.label("ticket_no"),
+                        Escalation.assigned_date.label("assigned_date"),Complaint_reg_constants.constants.label("status")).filter(Escalation.resolved_person==user_id,Complaint_reg.id==Escalation.complaint_id,Complaint_reg_constants.values==Escalation.status).all()
+                    issueData=list(map(lambda n:n._asdict(),issues_data))    
+                    return format_response(True,"view details",issueData)
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
-                return format_response(False,"Unauthorised access",{},401) 
+                return format_response(False,"Unauthorised access",{},401)
         except Exception as e:
             print(e) 
-            return format_response(False,"Bad gateway",{},502)  
+            return format_response(False,"Bad gateway",{},502)
+
+# class Solution_submit(Resource):
+#     def post(self):
+#         try:
+#             data=request.get_json()
+#             user_id=data['userId'] 
+#             session_id=data['sessionId'] 
+#             ticket=data["ticketno"]
+#             issue=data["issue"]
+#             des=data["discription"]
+#             sol=data["solution"]
+#             res_person=data["resolved_person"]
+#             se=True 
+#             if se: 
+#                 per = True
+#                 if per:
+#                     d={"ticket_no":ticket,"issue_discription":des,"issue_category":issue,"solution":sol,"resolved_person":res_person}
+#                     data={
+#                             "success":"True",
+#                             "message":"view details",
+#                             "data":d                
+#                         }
+#                     return data
+#                 else: 
+#                     return format_response(False,"Forbidden access",{},403) 
+#             else: 
+#                 return format_response(False,"Unauthorised access",{},401) 
+#         except Exception as e:
+#             print(e) 
+#             return format_response(False,"Bad gateway",{},502)  
 
 
 
@@ -539,7 +569,7 @@ class Complaint_previous(Resource):
                     def previ(id):
                         try:
                             l1=[]
-                            previous_est=Escalation.query.filter_by(uid=id).first()
+                            previous_est=Escalation.query.filter_by(complaint_id=id).first()
                             escalated_person=previous_est.escalated_person
                             l1.append(escalated_person)
                             resolved_person=previous_est.resolved_person
@@ -608,7 +638,8 @@ class AllComp(Resource):
                 if per:
                     if issue_date==-1:
                         if status==1:
-                            ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status")).filter(Complaint_reg.status==status).all()
+                            ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),
+                                Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status")).filter(Complaint_reg.status==status,Complaint_reg.id==Escalation.complaint_id).all()
                             print(type(ticket_data))
                             ticketData=list(map(lambda n:n._asdict(),ticket_data))
                             print(ticketData)
@@ -617,7 +648,7 @@ class AllComp(Resource):
                                 i['ticketRaisingDate']=ticket_raising_date
                             return {"status":200,"message":ticketData}
                         else:
-                            ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status"),Escalation.resolved_person.label("resolvedPerson"),Escalation.resolved_date.label("resolvedDate"),Escalation.solution.label("solution")).filter(Complaint_reg.status==status,Escalation.uid==Complaint_reg.id).all()
+                            ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status"),Escalation.resolved_person.label("resolvedPerson"),Escalation.resolved_date.label("resolvedDate"),Escalation.solution.label("solution")).filter(Complaint_reg.status==status,Escalation.complaint_id==Complaint_reg.id).all()
                             print(type(ticket_data))
                             ticketData=list(map(lambda n:n._asdict(),ticket_data))
                             print(ticketData)
@@ -661,7 +692,7 @@ class All_complaints(Resource):
                     def previous(id):
                         try:
                             l1=[]
-                            previous_est=Escalation.query.filter_by(uid=id).first()
+                            previous_est=Escalation.query.filter_by(complaint_id=id).first()
                             escalated_person=previous_est.escalated_person
                             l1.append(escalated_person)
                             resolved_person=previous_est.resolved_person

@@ -41,7 +41,8 @@ class Escalation(db.Model):
     resolved_date=db.Column(db.DateTime(),default=datetime.utcnow,onupdate=datetime.utcnow)
     status=db.Column(db.Integer,unique=False,nullable=True) 
     solution=db.Column(db.String(100),nullable=True)
-    uid=db.Column(db.Integer,db.ForeignKey('complaint_reg.id'))
+    complaint_id=db.Column(db.Integer,db.ForeignKey('complaint_reg.id'))
+    assigned_date=db.Column(db.DateTime(),default=datetime.utcnow,onupdate=datetime.utcnow)
 class UserProfile(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     uid=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
