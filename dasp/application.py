@@ -42,7 +42,7 @@ api.add_resource(All_complaints,"/app/all_complaints")
 # api.add_resource(pending_ticket_view,"/app/pending_ticket_view")
 # api.add_resource(Tickets_day_view,"/app/pending_tickets_singleday")
 # api.add_resource(finding_assigned_persons_id,"/app/assignedperson_id")
-api.add_resource(AllComp,"/app/all_complaints")
+api.add_resource(AllComp,"/app/complaints")
 if __name__ == '__main__':
     db.create_all()
     application.run(debug = True) 
