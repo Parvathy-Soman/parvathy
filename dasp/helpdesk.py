@@ -12,6 +12,9 @@ from format_response import *
 from model import *
 from urls_list import *
 from session_permission import *
+from dateutil import tz
+to_zone=tz.gettz('Asia/Calcutta')
+from datetime import datetime as dt
 # api = Api(application) 
 
 #--------------------------------------------------------------------------------------------------------
@@ -52,13 +55,15 @@ class Search_ticket(Resource):
                     if comp==None:
                         return data1
                     else:
+                   
+                       
                         idd=comp.id
                         #return idd                              
                         user_details=UserProfile.query.filter_by(uid=us_id).first()
                         esl=Escalation.query.filter_by(complaint_id=comp_id).first()                                             
                         status_details=Complaint_reg_constants.query.filter_by(values=comp.status).first() 
-                        issue_details=issue_category_constants.query.filter_by(issue_no=comp.issue_category).first()                       
-                        #id1=escalation_details.
+                        issue_details=issue_category_constants.query.filter_by(issue_no=comp.issue_category).first()  
+                        d=UserProfile.query.filter_by(uid=esl.escalated_person).first()                  
                         uid=user_details.uid
                         dasp=stud_myprogramme(uid)
                         user_programme_details=dasp["data"]
@@ -69,7 +74,7 @@ class Search_ticket(Resource):
                         ticketno=comp.ticket_no
                         description=comp.issue_discription
                         status=status_details.constants
-                        esc_person=esl.escalated_person
+                        esc_person=d.fname
                         e_date=comp.ticket_raising_date
                         date=e_date.strftime("%Y-%m-%d")
                         tid=comp.id
@@ -83,6 +88,7 @@ class Search_ticket(Resource):
                         data={"user_details":l}
                         return format_response(True,"view details",data) 
                         # return data2
+                        
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
@@ -90,6 +96,8 @@ class Search_ticket(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)
+            
+
 
 # api.add_resource(Search_ticket,"/app/ticket_search")                
 
@@ -273,7 +281,7 @@ class Ticket_reassign(Resource):
                      
                     comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
                     update=Escalation.query.filter_by(complaint_id=Complaint_reg.id).first()  
-                    if comp.status==0 or comp.status==5:                                     
+                    if comp.status==1 or comp.status==4:                                     
                         update.resolved_person=ass_person
                         db.session.commit() 
                     # else:
@@ -303,27 +311,27 @@ class Ticket_reassign(Resource):
 
 
 
-class AllComp(Resource):
-    def post(self):
-        try:
-            data=request.get_json()
-            user_id=data['userId'] 
-            # session_id=data['sessionId'] 
-            status=data['status'] 
-            issue_date=data['iss_date'] 
-            # se=checkSessionValidity(session_id,user_id) 
-            se=True
-            if se: 
-                per = True
-                if per:
-                    # if issue_date=="-1":
+# class AllComp(Resource):
+#     def post(self):
+#         try:
+#             data=request.get_json()
+#             user_id=data['userId'] 
+#             # session_id=data['sessionId'] 
+#             status=data['status'] 
+#             issue_date=data['iss_date'] 
+#             # se=checkSessionValidity(session_id,user_id) 
+#             se=True
+#             if se: 
+#                 per = True
+#                 if per:
+#                     # if issue_date=="-1":
 
-                    ticket_data=db.session.query(Complaint_reg,UserProfile).with_entities(Complaint_reg.id.label("comp_id"),UserProfile.fname.label('name'),Complaint_reg.ticket_no.label("ticket_no"),Complaint_reg.issue_discription.label("issue")).filter(Complaint_reg.status==status,Complaint_reg.user_id==UserProfile.uid,Complaint_reg.ticket_raising_date==issue_date).all()
-                    ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                    return {"status":200,"message":ticketData}
-        except Exception as e:
-            print(e) 
-            return format_response(False,"Bad gateway",{},502)
+#                     ticket_data=db.session.query(Complaint_reg,UserProfile).with_entities(Complaint_reg.id.label("comp_id"),UserProfile.fname.label('name'),Complaint_reg.ticket_no.label("ticket_no"),Complaint_reg.issue_discription.label("issue")).filter(Complaint_reg.status==status,Complaint_reg.user_id==UserProfile.uid,Complaint_reg.ticket_raising_date==issue_date).all()
+#                     ticketData=list(map(lambda n:n._asdict(),ticket_data))
+#                     return {"status":200,"message":ticketData}
+#         except Exception as e:
+#             print(e) 
+#             return format_response(False,"Bad gateway",{},502)
 
 #---------------------------------------------------------------------------------------------------------
 #  Fetch admin and teacher for assigning the issues
@@ -348,6 +356,11 @@ class Assign_users(Resource):
             print(e) 
             return format_response(False,"Bad gateway",{},502)
 
+def current_datetime():
+    c_date=datetime.now().astimezone(to_zone).strftime("%Y-%m-%d %H:%M:%S")
+    cur_date=dt.strptime(c_date, '%Y-%m-%d %H:%M:%S')
+    return cur_date
+
 class Assign_submit(Resource):
     def post(self):
         try:
@@ -355,8 +368,10 @@ class Assign_submit(Resource):
             user_id=data['userId'] 
             session_id=data['sessionId'] 
             uid=data["uId"]
-            escalated_person=data["escalatedPerson"]
+            # escalated_person=data["escalatedPerson"]
             resolved_person=data["resolvedPerson"]
+            resolved_date=current_datetime()
+            print(resolved_date)
             # resolved_date=data["resolvedDate"]
             # status=data["status"]
             # solution=data["solution"]
@@ -364,7 +379,7 @@ class Assign_submit(Resource):
             if se: 
                 per = True
                 if per:                  
-                    assign=Escalation(complaint_id=uid,escalated_person=escalated_person,resolved_person=resolved_person,status=2)
+                    assign=Escalation(complaint_id=uid,resolved_person=resolved_person,status=2,resolved_date=resolved_date,escalated_person="")
                     db.session.add(assign)
                     db.session.commit()
                     # details={"userDetails":assign}
@@ -405,35 +420,35 @@ class Assigned_issues(Resource):
             print(e) 
             return format_response(False,"Bad gateway",{},502)
 
-# class Solution_submit(Resource):
-#     def post(self):
-#         try:
-#             data=request.get_json()
-#             user_id=data['userId'] 
-#             session_id=data['sessionId'] 
-#             ticket=data["ticketno"]
-#             issue=data["issue"]
-#             des=data["discription"]
-#             sol=data["solution"]
-#             res_person=data["resolved_person"]
-#             se=True 
-#             if se: 
-#                 per = True
-#                 if per:
-#                     d={"ticket_no":ticket,"issue_discription":des,"issue_category":issue,"solution":sol,"resolved_person":res_person}
-#                     data={
-#                             "success":"True",
-#                             "message":"view details",
-#                             "data":d                
-#                         }
-#                     return data
-#                 else: 
-#                     return format_response(False,"Forbidden access",{},403) 
-#             else: 
-#                 return format_response(False,"Unauthorised access",{},401) 
-#         except Exception as e:
-#             print(e) 
-#             return format_response(False,"Bad gateway",{},502)  
+class Solution_submit(Resource):
+    def post(self):
+        try:
+            data=request.get_json()
+            user_id=data['userId'] 
+            session_id=data['sessionId'] 
+            ticket=data["ticketno"]
+            issue=data["issue"]
+            des=data["discription"]
+            sol=data["solution"]
+            res_person=data["resolved_person"]
+            se=True 
+            if se: 
+                per = True
+                if per:
+                    d={"ticket_no":ticket,"issue_discription":des,"issue_category":issue,"solution":sol,"resolved_person":res_person}
+                    data={
+                            "success":"True",
+                            "message":"view details",
+                            "data":d                
+                        }
+                    return data
+                else: 
+                    return format_response(False,"Forbidden access",{},403) 
+            else: 
+                return format_response(False,"Unauthorised access",{},401) 
+        except Exception as e:
+            print(e) 
+            return format_response(False,"Bad gateway",{},502)  
 
 
 
@@ -636,38 +651,53 @@ class AllComp(Resource):
             if se: 
                 per = True
                 if per:
-                    if issue_date==-1:
-                        if status==1:
+                    if issue_date==-1:                        
+                        if status in range(1,6):
                             ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),
-                                Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status")).filter(Complaint_reg.status==status,Complaint_reg.id==Escalation.complaint_id).all()
-                            print(type(ticket_data))
+                                Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg_constants.constants.label("status")).filter(Complaint_reg.status==status,Complaint_reg.id==Escalation.complaint_id,Complaint_reg_constants.values==Complaint_reg.status).all()
+                            # print(type(ticket_data))
                             ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                            print(ticketData)
+                            # print(ticketData)
+                            for i in ticketData:                            
+                                ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
+                                i['ticketRaisingDate']=ticket_raising_date
+                            return {"status":200,"message":ticketData}
+                        elif status==7:
+                            # print("status=7")
+                            ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),
+                                Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg_constants.constants.label("status")).filter(Complaint_reg.status.in_([1,4]),Complaint_reg.id==Escalation.complaint_id,Complaint_reg_constants.values==Complaint_reg.status).all()
+                            ticketData=list(map(lambda n:n._asdict(),ticket_data))
                             for i in ticketData:                            
                                 ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
                                 i['ticketRaisingDate']=ticket_raising_date
                             return {"status":200,"message":ticketData}
                         else:
-                            ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status"),Escalation.resolved_person.label("resolvedPerson"),Escalation.resolved_date.label("resolvedDate"),Escalation.solution.label("solution")).filter(Complaint_reg.status==status,Escalation.complaint_id==Complaint_reg.id).all()
-                            print(type(ticket_data))
-                            ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                            print(ticketData)
-                            for i in ticketData:  
-                                resolved_date=i.get("resolvedDate").strftime("%d-%m-%Y %H:%M:%S") 
-                                i['resolvedDate']=resolved_date                         
-                                ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
-                                i['ticketRaisingDate']=ticket_raising_date
-                            return {"status":200,"message":ticketData}
+                            return format_response(True,"no such status details") 
 
-                    # ticket_data=db.session.query(Complaint_reg,UserProfile).with_entities(Complaint_reg.id.label("comp_id"),UserProfile.fname.label('name'),Complaint_reg.ticket_no.label("ticket_no"),Complaint_reg.issue_discription.label("issue")).filter(Complaint_reg.status==status,Complaint_reg.user_id==UserProfile.uid,Complaint_reg.ticket_raising_date==issue_date).all()
-                    # ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                    # return {"status":200,"message":ticketData}
-                        
-                    else:
-                        print("fdjgghh")
-                        ticket_data=db.session.query(Complaint_reg,UserProfile).with_entities(Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status")).filter(Complaint_reg.status==status,Complaint_reg.ticket_raising_date==issue_date).all()
-                        ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                        return {"status":200,"message":ticketData}
+                            # ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status"),Escalation.resolved_person.label("resolvedPerson"),Escalation.resolved_date.label("resolvedDate"),Escalation.solution.label("solution")).filter(Complaint_reg.status==status,Escalation.complaint_id==Complaint_reg.id).all()
+                            # print(type(ticket_data))
+                            # ticketData=list(map(lambda n:n._asdict(),ticket_data))
+                            # print(ticketData)
+                            # for i in ticketData:  
+                            #     resolved_date=i.get("resolvedDate").strftime("%d-%m-%Y %H:%M:%S") 
+                            #     i['resolvedDate']=resolved_date                         
+                            #     ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
+                            #     i['ticketRaisingDate']=ticket_raising_date
+                            # return {"status":200,"message":ticketData}
+                    print ("ajjjkjkkhk")
+                    ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),
+                                Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg_constants.constants.label("status")).filter(Complaint_reg.status==status,Complaint_reg.ticket_raising_date==issue_date,Complaint_reg.id==Escalation.complaint_id,Complaint_reg_constants.values==Complaint_reg.status).all()
+                            # print(type(ticket_data))
+                    ticketData=list(map(lambda n:n._asdict(),ticket_data))
+                    for i in ticketData:                           
+                        ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
+                        i['ticketRaisingDate']=ticket_raising_date
+                    return {"status":200,"message":ticketData}   
+                    # else:
+                    #     print("fdjgghh")
+                    #     ticket_data=db.session.query(Complaint_reg,UserProfile).with_entities(Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status")).filter(Complaint_reg.status==status,Complaint_reg.ticket_raising_date==issue_date).all()
+                    #     ticketData=list(map(lambda n:n._asdict(),ticket_data))
+                    #     return {"status":200,"message":ticketData}
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
