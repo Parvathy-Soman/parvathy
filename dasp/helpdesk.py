@@ -49,12 +49,12 @@ class Search_ticket(Resource):
                     comp_id=comp.id
                     us_id=comp.user_id
                     l=[]
-                    data1={
-                    "success":"False",
-                    "message":"Ticket number is not available"
-                    }
+                    # data1={
+                    # "success":"False",
+                    # "message":"Ticket number is not available"
+                    # }
                     if comp==None:
-                        return data1
+                        return format_response(False,"Ticket number is not available",{},404)
                     else:                 
                        
                         idd=comp.id
@@ -84,7 +84,7 @@ class Search_ticket(Resource):
                         
                         l.append(d)
                         data={"user_details":l}
-                        return format_response(True,"Ticket numbet fetched successfully",data) 
+                        return format_response(True,"Ticket number fetched successfully",data) 
                        
                         
                 else: 
@@ -94,10 +94,7 @@ class Search_ticket(Resource):
         except Exception as e:
             print(e) 
             return format_response(False,"Bad gateway",{},502)
-            
-
-
-              
+             
 
 #.........................................................................................................
 #  STATUS UPDATION--by clicking the solution button,the "Pending"(2) status should be updated as "In progress"(3)
@@ -110,22 +107,24 @@ class Status_update(Resource):
             user_id=data['userId'] 
             session_id=data['sessionId']             
             ticketno=data["ticketNo"] 
-            se=True 
+            se=checkSessionValidity(session_id,user_id)  
             if se: 
                 per = True
                 if per:                     
-                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first()                    
+                    # staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first()                    
                     comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()                   
-                    
-                    if comp.status==2:                        
-                        comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=3))
+                    if comp!=None:
+                        if comp.status==2:                        
+                            comp=Complaint_reg.query.filter_by(ticket_no=ticketno).update(dict(status=3))
+                            
+                            db.session.commit()                   
                         
-                        db.session.commit()                   
-                       
-                        return format_response(True,"Status updated successfully",{})
-                        
+                            return format_response(True,"Status updated successfully",{})
+                            
+                        else:
+                            return format_response(False,"Solution is already resolved",{},404)
                     else:
-                       return format_response(False,"Already in progress state",{},404)
+                        return format_response(False,"Ticket number is not available",{},404) 
 
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
@@ -149,26 +148,38 @@ class Solution_confirmation(Resource):
             session_id=data['sessionId'] 
             ticketno=data["ticketNo"]
             solution=data["solution"]
-            se=True 
+            se=checkSessionValidity(session_id,user_id) 
+             
             if se: 
                 per = True
                 if per:
-                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first() 
-                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()                    
+                    # staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first() 
+                    # comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()                    
                     sol=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
                     print(sol)
                     if sol!=None:
                         sts=Escalation.query.filter_by(complaint_id=sol.id).first()                            
                         if sol.status==3: 
-                            sol.solution=solution
+                            # sol.solution=solution
                             sts.solution=solution
                             sts.resolved_date=current_datetime()                           
                             sol.status=4  
                             sts.status=4                                                  
                             db.session.commit()                   
                             return format_response(True,"Solution is submitted successfully",{})
+                        # if sol.status==6:
+                        #     print("hgvfydtsfvghvcrth") 
+                        #     # sol.solution=solution
+                        #     sts.solution=solution
+                        #     sts.resolved_date=current_datetime()                           
+                        #     sol.status=4  
+                        #     sts.status=4  
+                        #     print(sts.status)                                                
+                        #     db.session.commit()                   
+                        #     return format_response(True,"Solution is submitted successfully",{})
+                        
                         else:
-                            return format_response(False,"Ticket number is not in progress state",{},404)  
+                            return format_response(False,"Solution is already submitted",{},404)  
                     else:
                         return format_response(False,"Ticket number is not available",{},404)               
                    
@@ -185,56 +196,56 @@ class Solution_confirmation(Resource):
 #  ticket is reassigned if the status is Resolved(4)
 #--------------------------------------------------------------------------------------------------
 
-class Ticket_reassign(Resource):
-    def post(self):
-        try:
-            data=request.get_json()
-            user_id=data['userId'] 
-            session_id=data['sessionId']
-            ticketno=data["ticketno"]
-            issue=data["issue_category"]            
-            ass_person=data["ass_person"]
+# class Ticket_reassign(Resource):
+#     def post(self):
+#         try:
+#             data=request.get_json()
+#             user_id=data['userId'] 
+#             session_id=data['sessionId']
+#             ticketno=data["ticketno"]
+#             issue=data["issue_category"]            
+#             ass_person=data["ass_person"]
   
-            se=True 
-            if se: 
-                per = True
-                if per:
-                    staff_list=[]
-                    staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
-                    staff_user=UserProfile.query.filter_by(uid=user_id).first()
-                    staff_fname=staff_user.fname
-                    staff_lname=staff_user.lname
-                    staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
-                    staff_list.append(staff_details)
-                    l=[]
+#             se=True 
+#             if se: 
+#                 per = True
+#                 if per:
+#                     staff_list=[]
+#                     staff_session=Session.query.filter_by(uid=user_id,session_token=session_id).first 
+#                     staff_user=UserProfile.query.filter_by(uid=user_id).first()
+#                     staff_fname=staff_user.fname
+#                     staff_lname=staff_user.lname
+#                     staff_details={"staff_fname":staff_fname,"staff_lname":staff_lname}
+#                     staff_list.append(staff_details)
+#                     l=[]
                      
-                    comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
-                    update=Escalation.query.filter_by(complaint_id=Complaint_reg.id).first()  
-                    if comp.status==1 or comp.status==4:                                     
-                        update.resolved_person=ass_person
-                        db.session.commit() 
-                    # else:
-                    #     return format_response(True,"already in_progress state",{})
+#                     comp=Complaint_reg.query.filter_by(ticket_no=ticketno).first()
+#                     update=Escalation.query.filter_by(complaint_id=Complaint_reg.id).first()  
+#                     if comp.status==1 or comp.status==6:                                     
+#                         update.resolved_person=ass_person
+#                         db.session.commit() 
+#                     # else:
+#                     #     return format_response(True,"already in_progress state",{})
                     
-                    status=comp.status 
-                    esc_person=update.escalated_person           
-                    d={"ticket_no":ticketno,"issue_category":issue,"escalated_person":esc_person,"resolved_person":ass_person,"status":status}
-                    data={
-                            "success":"True",
-                            "message":"view details",
-                            "data":d                
-                        }
-                    l.append(d)
-                    data={"staff_details":staff_list,"user_details":l}
-                    return format_response(True,"view details",data)
+#                     status=comp.status 
+#                     esc_person=update.escalated_person           
+#                     d={"ticket_no":ticketno,"issue_category":issue,"escalated_person":esc_person,"resolved_person":ass_person,"status":status}
+#                     data={
+#                             "success":"True",
+#                             "message":"view details",
+#                             "data":d                
+#                         }
+#                     l.append(d)
+#                     data={"staff_details":staff_list,"user_details":l}
+#                     return format_response(True,"view details",data)
                    
-                else: 
-                    return format_response(False,"Forbidden access",{},403) 
-            else: 
-                return format_response(False,"Unauthorised access",{},401) 
-        except Exception as e:
-            print(e) 
-            return format_response(False,"Bad gateway",{},502)   
+#                 else: 
+#                     return format_response(False,"Forbidden access",{},403) 
+#             else: 
+#                 return format_response(False,"Unauthorised access",{},401) 
+#         except Exception as e:
+#             print(e) 
+#             return format_response(False,"Bad gateway",{},502)   
 # api.add_resource(Ticket_reassign,"/app/re_assign")
 
 
@@ -266,7 +277,7 @@ class Assign_users(Resource):
                     # user_l=json.loads(userd,object_pairs_hook=collections.OrderedDict)
                     # us=list(userDetails.items())
                     # return {"status":200,"message":userData}
-                    return format_response(True,"Assignee list successfully fetched",{"assignee_list":user_list})
+                    return format_response(True,"Assignee list fetched successfully",{"assignee_list":user_list})
                 
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
@@ -288,29 +299,33 @@ class Assign_submit(Resource):
             user_id=data['userId'] 
             session_id=data['sessionId'] 
             uid=data["uId"]
-            # escalated_person=data["escalatedPerson"]
+            ticket_no=data["ticketNo"]
             resolved_person=data["resolvedPerson"]
-            # assigned_date=current_datetime()
-            # print(resolved_date)
-            # resolved_date=data["resolvedDate"]
-            # status=data["status"]
-            # solution=data["solution"]
             se=checkSessionValidity(session_id,user_id) 
             if se: 
                 per = True
-                if per:                  
-                    assign=Escalation(complaint_id=uid,resolved_person=resolved_person,escalated_person=user_id)
-                    comp=Complaint_reg.query.filter_by(id=uid).update(dict(status=2))
-                    db.session.add(assign)
-                    db.session.commit()
-                    # details={"userDetails":assign}
-                    # data={
-                    #         "success":"True",
-                    #         "message":"view details",
-                    #         "data":assign               
-                    #     }
-                    # return data
-                    return format_response(True,"Assignee is selected successfully",{})
+                if per: 
+                    try:
+                        comp=Complaint_reg.query.filter_by(user_id=uid,status=1,ticket_no=ticket_no).first() 
+                        if comp!=None:
+                            assign=Escalation(complaint_id=comp.id,resolved_person=resolved_person,escalated_person=user_id)                        
+                            comp=Complaint_reg.query.filter_by(user_id=uid,ticket_no=ticket_no).update(dict(status=2))
+                            db.session.add(assign)
+                            db.session.commit()
+                            return format_response(True,"Assignee is selected successfully",{})
+                        else:
+                            return format_response(False,"Complaint is already assigned",{},404) 
+
+                    except Exception:
+                        if comp!=None:
+                            comp=Complaint_reg.query.filter_by(user_id=uid,status=6,ticket_no=ticket_no).first() 
+                            assign=Escalation(complaint_id=comp.id,resolved_person=resolved_person,escalated_person=user_id)                        
+                            comp=Complaint_reg.query.filter_by(user_id=uid,ticket_no=ticket_no).update(dict(status=2))
+                            db.session.add(assign)
+                            db.session.commit()
+                            return format_response(True,"Assignee is selected successfully",{})
+                        else:
+                            return format_response(False,"Complaint is already assigned",{},404)
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
@@ -328,11 +343,13 @@ class Assigned_issues(Resource):
             se=checkSessionValidity(session_id,user_id) 
             if se: 
                 per = True
-                if per:                  
-                    issues_data=db.session.query(Complaint_reg,Escalation,Complaint_reg_constants).with_entities(Complaint_reg.ticket_no.label("ticket_no"),
-                        Escalation.assigned_date.label("assigned_date"),Complaint_reg_constants.constants.label("status")).filter(Escalation.resolved_person==user_id,Complaint_reg.id==Escalation.complaint_id,Complaint_reg_constants.values==Escalation.status).all()
-                    issueData=list(map(lambda n:n._asdict(),issues_data))    
-                    return format_response(True,"view details",issueData)
+                if per: 
+                    assigned_comp=db.session.query(Escalation,Complaint_reg,Complaint_reg_constants).with_entities(Escalation.complaint_id.label("complaintId"),Complaint_reg_constants.constants.label("status"),Escalation.assigned_date.label("assignedDate"),Complaint_reg.ticket_no.label("ticketNo")).filter(Escalation.resolved_person==user_id,Escalation.complaint_id==Complaint_reg.id,Complaint_reg.status==Complaint_reg_constants.values).all()   
+                    assignedData=list(map(lambda n:n._asdict(),assigned_comp))
+                    for i in assignedData:                            
+                        i['assignedDate']=i.get("assignedDate").strftime("%d-%m-%Y %H:%M:%S")  
+                    return format_response(True,"view details",{"issueDetails":assignedData})           
+
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
@@ -354,21 +371,12 @@ class AllComp(Resource):
             if se: 
                 per = True
                 if per:
-                    if issue_date==-1:                        
-                        # if status in range(1,6):
-                        #     ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),
-                        #         Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg_constants.constants.label("status")).filter(Complaint_reg.status==status,Complaint_reg.id==Escalation.complaint_id,Complaint_reg_constants.values==Complaint_reg.status).all()
-                        #     # print(type(ticket_data))
-                        #     ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                        #     # print(ticketData)
-                        #     for i in ticketData:                            
-                        #         ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
-                        #         i['ticketRaisingDate']=ticket_raising_date
-                        #     return {"status":200,"message":ticketData}
+                    if issue_date==-1:                     
+                        
                         if status==7:
                             # print("status=7")
                             ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),
-                                Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg_constants.constants.label("status")).filter(Complaint_reg.status.in_([1,4]),Complaint_reg_constants.values==Complaint_reg.status).all()
+                                Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg_constants.constants.label("status")).filter(Complaint_reg.status.in_([1,6]),Complaint_reg_constants.values==Complaint_reg.status).all()
                             ticketData=list(map(lambda n:n._asdict(),ticket_data))
                             for i in ticketData:                            
                                 ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
@@ -377,32 +385,7 @@ class AllComp(Resource):
                             # "message":"Complaints fetched successfully","data":ticketData}
                             return format_response(True,"Complaints fetched successfully",{"ticketData":ticketData}) 
                         else:
-                            return format_response(False,"no such status details",{},404) 
-
-                            # ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status"),Escalation.resolved_person.label("resolvedPerson"),Escalation.resolved_date.label("resolvedDate"),Escalation.solution.label("solution")).filter(Complaint_reg.status==status,Escalation.complaint_id==Complaint_reg.id).all()
-                            # print(type(ticket_data))
-                            # ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                            # print(ticketData)
-                            # for i in ticketData:  
-                            #     resolved_date=i.get("resolvedDate").strftime("%d-%m-%Y %H:%M:%S") 
-                            #     i['resolvedDate']=resolved_date                         
-                            #     ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
-                            #     i['ticketRaisingDate']=ticket_raising_date
-                            # return {"status":200,"message":ticketData}
-                    # print ("ajjjkjkkhk")
-                    # ticket_data=db.session.query(Complaint_reg,Escalation).with_entities(Complaint_reg.ticket_raising_date.label("ticketRaisingDate"),Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),
-                    #             Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg_constants.constants.label("status")).filter(Complaint_reg.status==status,Complaint_reg.ticket_raising_date==issue_date,Complaint_reg.id==Escalation.complaint_id,Complaint_reg_constants.values==Complaint_reg.status).all()
-                    #         # print(type(ticket_data))
-                    # ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                    # for i in ticketData:                           
-                    #     ticket_raising_date=i.get("ticketRaisingDate").strftime("%d-%m-%Y %H:%M:%S")
-                    #     i['ticketRaisingDate']=ticket_raising_date
-                    # return {"status":200,"message":ticketData}   
-                    # else:
-                    #     print("fdjgghh")
-                    #     ticket_data=db.session.query(Complaint_reg,UserProfile).with_entities(Complaint_reg.id.label("compId"),Complaint_reg.solution.label("solution"),Complaint_reg.issue.label("issue"),Complaint_reg.ticket_no.label("ticketNo"),Complaint_reg.status.label("status")).filter(Complaint_reg.status==status,Complaint_reg.ticket_raising_date==issue_date).all()
-                    #     ticketData=list(map(lambda n:n._asdict(),ticket_data))
-                    #     return {"status":200,"message":ticketData}
+                            return format_response(False,"No ticket details",{},404)                             
                 else: 
                     return format_response(False,"Forbidden access",{},403) 
             else: 
